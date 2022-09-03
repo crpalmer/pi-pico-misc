@@ -28,12 +28,9 @@ main(int argc, char **argv)
     while (1) {
 	int buzzes = 0;
 
-printf("%d\n", i->get_with_debounce());
 	while (i->get_with_debounce() == TRIGGER) {
-printf("buzz %d\n", buzzes);
 	    o->set(BUZZ);
 	    ms_sleep(75);
-printf("quiet\n");
 	    o->set(QUIET);
 	    ms_sleep(100);
 	    buzzes++;
