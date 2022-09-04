@@ -3,7 +3,13 @@ add_executable(fire
         )
 
 # pull in common dependencies
-target_link_libraries(fire pi pico_stdlib hardware_gpio hardware_pio)
+target_link_libraries(fire
+    pi
+    pico_stdlib
+    pico_multicore
+    hardware_gpio
+    hardware_pio
+)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(fire)
