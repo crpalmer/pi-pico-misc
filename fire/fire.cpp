@@ -21,7 +21,7 @@ static color_t red    = { 203,  89,  67 };
 #define SLEEP_HIGH 100
 
 #define FIRE_PIN 0
-#define N_LEDS 10
+#define FIRE_N_LEDS 26
 
 static critical_section cs;
 static NeoPixelPico *fire_neo;
