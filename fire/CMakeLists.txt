@@ -7,6 +7,7 @@ target_link_libraries(fire
     pi
     pico_stdlib
     pico_multicore
+    hardware_adc
     hardware_gpio
     hardware_pio
 )
