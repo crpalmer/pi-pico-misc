@@ -5,6 +5,7 @@
 #include <tusb.h>
 #include "gp-input.h"
 #include "gp-output.h"
+#include "light-sensor.h"
 #include "neopixel-pico.h"
 #include "pi.h"
 #include "util.h"
@@ -28,6 +29,7 @@ static color_t skulls = { 255, 255,   0 };
 #define SKULLS_N_LEDS 2
 
 static critical_section cs;
+static LightSensor *light_sensor;
 static NeoPixelPico *fire_neo, *skulls_neo;
 static bool is_paused = false;
 static struct { int fire_high, skulls_high; } flicker = { 55, 55 };
@@ -106,6 +108,8 @@ main(int argc, char **argv)
 {
     pi_init_no_reboot();
 
+    light_sensor = new LightSensor(2);
+
     fire_neo = new NeoPixelPico(FIRE_PIN);
     fire_neo->set_n_leds(FIRE_N_LEDS);
 
@@ -140,6 +144,11 @@ main(int argc, char **argv)
 	    sscanf(&line[space], "%d %d\n", &flicker.fire_high, &flicker.skulls_high);
 	    resume_lights();
 	    printf("flicker %3d %3d\n", flicker.fire_high, flicker.skulls_high);
+	} else if (strcmp(line, "light_sensor") == 0) {
+	    for (int i = 0; i < 100; i++) {
+		printf("%3.0f\n", light_sensor->get()*100);
+		ms_sleep(500);
+	    }
 	} else if (strncmp(line, "orange ", space+1) == 0) {
 	    pause_lights();
 	    sscanf(&line[space], "%d %d %d\n", &orange.r, &orange.g, &orange.b);
@@ -174,6 +183,7 @@ main(int argc, char **argv)
 	} else {
 	    printf("bootsel - reboot for flashing\n");
 	    printf("flicker low high - set range of flicker\n");
+	    printf("light_sensor - dump light sensor data\n");
 	    printf("orange r g b - set orange color\n");
 	    printf("purple r g b - set purple color\n");
 	    printf("purple_pct pct - set amount of purple flickers\n");
