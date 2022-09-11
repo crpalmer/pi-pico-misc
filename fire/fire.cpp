@@ -14,9 +14,9 @@ typedef struct {
     int r, g, b;
 } color_t;
 
-static color_t orange = { 226, 121,  35 };
+static color_t orange = { 223,  56,  25 };
 static color_t purple = { 131,  56, 154 };
-static color_t red    = { 203,  89,  67 };
+static color_t red    = { 255,  15,  15 };
 static color_t skulls = { 255, 255,   0 };
 
 #define SLEEP_LOW 10
@@ -35,6 +35,13 @@ static bool is_paused = false;
 static struct { int fire_high, skulls_high; } flicker = { 55, 55 };
 static int purple_pct = 3;
 static int red_pct = 12;
+
+#define LIGHT_STATE_THRESHOLD	50
+#define FIRE_OFF_LUX		9
+#define FIRE_ON_LUX		8
+
+static int light_counter = -LIGHT_STATE_THRESHOLD;	/* start ON */
+static bool fire_is_on = true;
 
 static void set_is_paused(bool new_is_paused)
 {
@@ -92,10 +99,28 @@ static void fire_main()
     while (1) {
 	critical_section_enter_blocking(&cs);
 	if (! is_paused) {
-	    flicker_fire(fire_neo);
-	    fire_neo->show();
-	    flicker_skulls(skulls_neo);
-	    skulls_neo->show();
+	    double lux = light_sensor->get_lux();
+
+	    if (lux >= FIRE_OFF_LUX && light_counter < LIGHT_STATE_THRESHOLD) {
+		light_counter++;
+		if (light_counter == LIGHT_STATE_THRESHOLD && fire_is_on) {
+		    fire_neo->set_all(0, 0, 0);
+		    fire_neo->show();
+		    skulls_neo->set_all(0, 0, 0);
+		    skulls_neo->show();
+		    fire_is_on = false;
+		}
+	    } else if (lux <= FIRE_ON_LUX && light_counter > -LIGHT_STATE_THRESHOLD) {
+		light_counter--;
+		if (light_counter == -LIGHT_STATE_THRESHOLD) fire_is_on = true;
+	    }
+
+	    if (fire_is_on) {
+	        flicker_fire(fire_neo);
+	        fire_neo->show();
+	        flicker_skulls(skulls_neo);
+	        skulls_neo->show();
+	    }
 	}
 	critical_section_exit(&cs);
 
@@ -108,7 +133,7 @@ main(int argc, char **argv)
 {
     pi_init_no_reboot();
 
-    light_sensor = new LightSensor(2);
+    light_sensor = new LightSensor(2, light_sensor_temt6000);
 
     fire_neo = new NeoPixelPico(FIRE_PIN);
     fire_neo->set_n_leds(FIRE_N_LEDS);
@@ -139,14 +164,16 @@ main(int argc, char **argv)
 	    printf("red           %3d %3d %3d\n", red.r, red.g, red.b);
 	    printf("skulls        %3d %3d %3d\n", skulls.r, skulls.g, skulls.b);
 	    printf("percentages   %3d %3d %3d\n", 100-purple_pct-red_pct, purple_pct, red_pct);
+	    printf("fire_is_on    %s\n", fire_is_on ? "true" : "false");
+	    printf("light_counter %3d %7.2f\n", light_counter, light_sensor->get_lux());
 	} else if (strncmp(line, "flicker ", space+1) == 0) {
 	    pause_lights();
 	    sscanf(&line[space], "%d %d\n", &flicker.fire_high, &flicker.skulls_high);
 	    resume_lights();
 	    printf("flicker %3d %3d\n", flicker.fire_high, flicker.skulls_high);
-	} else if (strcmp(line, "light_sensor") == 0) {
-	    for (int i = 0; i < 100; i++) {
-		printf("%3.0f\n", light_sensor->get()*100);
+	} else if (strcmp(line, "light_sensor") == 0 || strcmp(line, "ls") == 0) {
+	    for (int i = 0; i < 20; i++) {
+		printf("%6.2f\n", light_sensor->get_lux());
 		ms_sleep(500);
 	    }
 	} else if (strncmp(line, "orange ", space+1) == 0) {
@@ -183,7 +210,7 @@ main(int argc, char **argv)
 	} else {
 	    printf("bootsel - reboot for flashing\n");
 	    printf("flicker low high - set range of flicker\n");
-	    printf("light_sensor - dump light sensor data\n");
+	    printf("light_sensor [or ls] - dump light sensor data\n");
 	    printf("orange r g b - set orange color\n");
 	    printf("purple r g b - set purple color\n");
 	    printf("purple_pct pct - set amount of purple flickers\n");
