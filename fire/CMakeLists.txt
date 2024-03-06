@@ -1,5 +1,5 @@
 add_executable(fire
-        fire
+        fire.cpp
         )
 
 # pull in common dependencies
